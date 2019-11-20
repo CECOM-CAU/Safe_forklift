@@ -1,4 +1,5 @@
-import sys,threading
+import sys
+from threading import Thread
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 from PyQt5.QtGui import QColor
@@ -9,14 +10,82 @@ import time
 
 from bluetooth import *
 # Create the client socket
-client_socket=BluetoothSocket( RFCOMM )
-client_socket.connect(("98:D3:41:FD:5C:6D", 1))
-readData = ""
-data = ""
+def ledOn(led):
+    if led == 0:
+        w.setObjectBackground(0,2,0)
+    elif led == 1:
+        w.setObjectBackground(1,3,0)
+    elif led == 2:
+        w.setObjectBackground(2,4,0)
+    elif led == 3:
+        w.setObjectBackground(3,4,0)
+    elif led == 4:
+        w.setObjectBackground(4,3,0)
+    elif led == 5:
+        w.setObjectBackground(5,2,0)
+    elif led == 6:
+        w.setObjectBackground(4,1,0)
+    elif led == 7:
+        w.setObjectBackground(3,0,0)
+    elif led == 8:
+        w.setObjectBackground(2,0,0)
+    elif led == 8:
+        w.setObjectBackground(1,1,0)
+def ledReset():
+    w.setObjectBackground(0,2,1)
+    w.setObjectBackground(1,3,1)
+    w.setObjectBackground(2,4,1)
+    w.setObjectBackground(3,4,1)
+    w.setObjectBackground(4,3,1)
+    w.setObjectBackground(5,2,1)
+    w.setObjectBackground(4,1,1)
+    w.setObjectBackground(3,0,1)
+    w.setObjectBackground(2,0,1)
+    w.setObjectBackground(1,1,1)
 
 def connectBluetooth():
     client_socket=BluetoothSocket( RFCOMM )
     client_socket.connect(("98:D3:41:FD:5C:6D", 1))
+    readData = ""
+    data = ""
+    distance = 80
+    while True:
+        data += str(client_socket.recv(2),"utf-8")
+        data.replace("\n", "")
+
+        #print(data)
+        distance = 40
+        if data.find("!") != -1 :
+            temp = data.split("!")
+            readData = temp[0]
+            data = temp[1]
+            #print(readData)
+            dataList = readData.split("#")
+            sector = 0
+            for x in range(1,5):
+                temp = int(dataList[x])
+                if temp < distance:
+                    if x == 1: #Front
+                        sector = int(dataList[0])
+                    elif x == 2: #Back
+                        sector = int(dataList[0])+ (90)
+                    elif x == 3: #Left
+                        sector = ((int(dataList[0]) + (180))%360)
+                    elif x == 4: #Right
+                        sector = ((int(dataList[0]) + 270)%360)
+                    inputSector = int((sector-18)%360/36)
+                    ledOn(inputSector)
+                    """
+                    t = Thread(target = ledOn,args = (inputSector))
+                    t.start()
+                    t.join()
+                    t = Thread(target = ledReset)
+                    t.start()
+                    t.join()
+"""
+
+    print("Finished")
+    client_socket.close()
 
 
 
@@ -32,6 +101,7 @@ test = ""
 class Form(QtWidgets.QDialog):
 
     def __init__(self,parent=None) :
+
         QtWidgets.QDialog.__init__(self, parent)
         self.ui = uic.loadUi("untitled.ui")
         self.ui.show()
@@ -60,39 +130,9 @@ class Form(QtWidgets.QDialog):
 def test():
     time.sleep(5)
     w.setObjectBackground(0, 4, 1)
+t = Thread(target = connectBluetooth)
+t.start()
 
 app = QtWidgets.QApplication(sys.argv)
 w= Form()
 sys.exit(app.exec())
-connectBluetooth()
-readData = ""
-data = ""
-
-while True:
-    data += str(client_socket.recv(2),"utf-8")
-    data.replace("\n", "")
-
-    #print(data)
-	distance = 80
-    if data.find("!") != -1 :
-        temp = data.split("!")
-        readData = temp[0]
-        data = temp[1]
-        dataList = readData.split("#")
-		sector = 0
-        for x in range(1,5):
-			if dataList[x] < distance:
-				if x == 0: #Front
-					sector = dataList[0]
-				elif x == 1: #Back
-					sector = (data[0] + 90)
-				elif x == 2: #Left
-					sector = (data[0] + 180)%360
-				elif x == 3: #Right
-					sector = (data[0] + 270)%360
-			inputSector = (sector-18)%360/36
-			print(inputSector)
-
-
-print("Finished")
-client_socket.close()
