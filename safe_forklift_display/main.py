@@ -6,21 +6,18 @@ from PyQt5.QtGui import QPalette
 from PyQt5 import QtWidgets
 from PyQt5 import uic
 import time
-#from bluetooth import *
 
-# bluetooth inputType:1#1#1#1!
-client_socket = ""
+from bluetooth import *
+# Create the client socket
+client_socket=BluetoothSocket( RFCOMM )
+client_socket.connect(("98:D3:41:FD:5C:6D", 1))
 readData = ""
+data = ""
+
 def connectBluetooth():
     client_socket=BluetoothSocket( RFCOMM )
     client_socket.connect(("98:D3:41:FD:5C:6D", 1))
-def dataRead():
-        data = client_socket.recv(1024)
-        if data.find("!"):
-            temp = data.split("!")
-            for x in range(0,len(temp)-1):
-                readData += x
-            data = temp[len(temp)-1]
+
 
 
 
@@ -65,13 +62,37 @@ def test():
     w.setObjectBackground(0, 4, 1)
 
 app = QtWidgets.QApplication(sys.argv)
-global w
 w= Form()
-
-w.setObjectBackground(0,4,0)
-t = threading.Thread(target=test)
-t.start()
-
-
 sys.exit(app.exec())
+connectBluetooth()
+readData = ""
+data = ""
 
+while True:
+    data += str(client_socket.recv(2),"utf-8")
+    data.replace("\n", "")
+
+    #print(data)
+	distance = 80
+    if data.find("!") != -1 :
+        temp = data.split("!")
+        readData = temp[0]
+        data = temp[1]
+        dataList = readData.split("#")
+		sector = 0
+        for x in range(1,5):
+			if dataList[x] < distance:
+				if x == 0: #Front
+					sector = dataList[0]
+				elif x == 1: #Back
+					sector = (data[0] + 90)
+				elif x == 2: #Left
+					sector = (data[0] + 180)%360
+				elif x == 3: #Right
+					sector = (data[0] + 270)%360
+			inputSector = (sector-18)%360/36
+			print(inputSector)
+
+
+print("Finished")
+client_socket.close()
